@@ -56,15 +56,6 @@ api.interceptors.response.use(
 export const searchFlights = (params) =>
   api.post('/travel/flights', params).then(response => response.data || []);
 
-export const searchHotels = (params) =>
-  api.post('/travel/hotels', params).then(response => response.data || []);
-
-export const searchCars = (params) =>
-  api.post('/travel/cars', params).then(response => response.data || []);
-
-export const searchCruises = (params) =>
-  api.post('/travel/cruises', params).then(response => response.data || []);
-
 // Add these to your existing api.js file
 // Search APIs
 export const searchPorts = (query) => api.post('/search/ports', { query });

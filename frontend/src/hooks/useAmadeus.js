@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { searchFlights, searchHotels, searchCars, searchCruises } from '../services/api';
+import { searchFlights} from '../services/api';
 
 export const useAmadeus = () => {
   const [loading, setLoading] = useState(false);
@@ -15,15 +15,6 @@ export const useAmadeus = () => {
       switch (type) {
         case 'flights':
           result = await searchFlights(params);
-          break;
-        case 'hotels':
-          result = await searchHotels(params);
-          break;
-        case 'cars':
-          result = await searchCars(params);
-          break;
-        case 'cruises':
-          result = await searchCruises(params);
           break;
         default:
           throw new Error('Invalid search type');

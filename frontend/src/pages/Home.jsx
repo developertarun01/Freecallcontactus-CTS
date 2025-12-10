@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from "react";
 import FlightForm from "../components/forms/FlightForm";
-import HotelForm from "../components/forms/HotelForm";
 import { Link } from "react-router-dom";
-import CarForm from "../components/forms/CarForm";
-import CruiseForm from "../components/forms/CruiseForm";
-import { Plane, Hotel, Car, Ship } from "lucide-react";
-import PopularAirline from "../components/common/PopularAirline";
-import TopFlights from "../components/common/TopFlights";
-import HotelDeals from "../components/common/HotelDeals";
+import { Plane } from "lucide-react";
 
 const Home = () => {
   const [activeTab, setActiveTab] = useState("flights");
@@ -27,13 +21,6 @@ const Home = () => {
   const renderForm = () => {
     switch (activeTab) {
       case "flights":
-        return <FlightForm />;
-      case "hotels":
-        return <HotelForm />;
-      case "cars":
-        return <CarForm />;
-      case "cruises":
-        return <CruiseForm />;
       default:
         return <FlightForm />;
     }

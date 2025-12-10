@@ -2,9 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   searchFlights,
-  searchHotels,
-  searchCars,
-  searchCruises,
 } from "../services/api";
 import {
   Filter,
@@ -14,11 +11,7 @@ import {
   Ship,
   Clock,
   MapPin,
-  Users,
   Star,
-  X,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import CallBanner from "../components/CallBanner";
 
@@ -125,10 +118,6 @@ const Results = () => {
         item.price ||
         (searchType === "flights"
           ? "299"
-          : searchType === "hotels"
-          ? "199"
-          : searchType === "cars"
-          ? "45"
           : "899")
     );
   };
@@ -171,79 +160,7 @@ const Results = () => {
               if (durationHours > filters.duration) return false;
             }
             break;
-
-          case "hotels":
-            // Rating filter
-            if (filters.rating > 0 && (item.rating || 0) < filters.rating) {
-              return false;
-            }
-
-            // Amenities filter
-            if (filters.amenities.length > 0) {
-              const itemAmenities = item.amenities || [];
-              if (
-                !filters.amenities.every((amenity) =>
-                  itemAmenities.includes(amenity)
-                )
-              ) {
-                return false;
-              }
-            }
-
-            // Hotel chains filter
-            if (
-              filters.hotelChains.length > 0 &&
-              !filters.hotelChains.includes(item.chain)
-            ) {
-              return false;
-            }
-            break;
-
-          case "cars":
-            // Car type filter
-            if (
-              filters.carTypes.length > 0 &&
-              !filters.carTypes.includes(item.carType)
-            ) {
-              return false;
-            }
-
-            // Provider filter
-            if (
-              filters.providers.length > 0 &&
-              !filters.providers.includes(item.provider)
-            ) {
-              return false;
-            }
-
-            // Transmission filter
-            if (
-              filters.transmission !== "any" &&
-              item.transmission !== filters.transmission
-            ) {
-              return false;
-            }
-            break;
-
-          case "cruises":
-            // Cruise line filter
-            if (
-              filters.cruiseLines.length > 0 &&
-              !filters.cruiseLines.includes(item.cruiseLine)
-            ) {
-              return false;
-            }
-
-            // Duration filter
-            const nights = item.nights || 7;
-            if (
-              nights < filters.durationRange[0] ||
-              nights > filters.durationRange[1]
-            ) {
-              return false;
-            }
-            break;
-        }
+}
 
         return true;
       })
@@ -288,15 +205,6 @@ const Results = () => {
         switch (searchType) {
           case "flights":
             data = await searchFlights(formData);
-            break;
-          case "hotels":
-            data = await searchHotels(formData);
-            break;
-          case "cars":
-            data = await searchCars(formData);
-            break;
-          case "cruises":
-            data = await searchCruises(formData);
             break;
           default:
             data = [];
@@ -415,21 +323,6 @@ const Results = () => {
         if (filters.stops !== "any") count++;
         if (filters.duration < 24) count++;
         break;
-      case "hotels":
-        if (filters.rating > 0) count++;
-        if (filters.amenities.length > 0) count += filters.amenities.length;
-        if (filters.hotelChains.length > 0) count += filters.hotelChains.length;
-        break;
-      case "cars":
-        if (filters.carTypes.length > 0) count += filters.carTypes.length;
-        if (filters.providers.length > 0) count += filters.providers.length;
-        if (filters.transmission !== "any") count++;
-        break;
-      case "cruises":
-        if (filters.cruiseLines.length > 0) count += filters.cruiseLines.length;
-        if (filters.durationRange[0] > 1 || filters.durationRange[1] < 30)
-          count++;
-        break;
     }
 
     return count;
@@ -437,69 +330,11 @@ const Results = () => {
 
   // Enhanced handleSelect function for all search types
   const handleSelect = (item) => {
-    // Calculate nights for hotels
-    const nights =
-      searchType === "hotels"
-        ? Math.ceil(
-            (new Date(formData?.checkOutDate) -
-              new Date(formData?.checkInDate)) /
-              (1000 * 60 * 60 * 24)
-          )
-        : 1;
-
-    // Calculate days for cars
-    const days =
-      searchType === "cars"
-        ? Math.ceil(
-            (new Date(formData?.toDateTime) -
-              new Date(formData?.fromDateTime)) /
-              (1000 * 60 * 60 * 24)
-          )
-        : 1;
 
     const itemWithDetails = {
       ...item,
       price: item.discountedPrice,
       originalPrice: item.originalPrice,
-
-      // ENHANCED: Hotel-specific booking details
-      ...(searchType === "hotels" && {
-        name: item.name,
-        address: item.address,
-        rating: item.rating,
-        amenities: item.amenities || [],
-        roomType: item.roomType,
-        coordinates: item.coordinates,
-        checkInDate: formData?.checkInDate,
-        checkOutDate: formData?.checkOutDate,
-        nights: nights,
-        rooms: formData?.rooms || 1,
-        adults: formData?.adults || 1,
-        children: formData?.children || 0,
-        guests: (formData?.adults || 1) + (formData?.children || 0),
-      }),
-
-      // ENHANCED: Car-specific booking details
-      ...(searchType === "cars" && {
-        carType: item.carType,
-        model: item.model,
-        provider: item.provider,
-        features: item.features || [],
-        transmission: item.transmission,
-        seats: item.seats,
-        bags: item.bags,
-        pickupLocation: item.pickupLocation || formData?.pickupLocation,
-        dropLocation:
-          item.dropLocation ||
-          formData?.dropLocation ||
-          formData?.pickupLocation,
-        fromDateTime: formData?.fromDateTime,
-        toDateTime: formData?.toDateTime,
-        duration: `${days} day${days > 1 ? "s" : ""}`,
-        driverAge: formData?.age,
-        fuelPolicy: item.fuelPolicy || "Full to Full",
-        mileage: item.mileage || "Unlimited",
-      }),
 
       // ENHANCED: Flight-specific booking details
       ...(searchType === "flights" && {
@@ -514,19 +349,6 @@ const Results = () => {
         class: item.class,
         travelers: (formData?.adults || 1) + (formData?.children || 0),
       }),
-
-      // ENHANCED: Cruise-specific booking details
-      ...(searchType === "cruises" && {
-        cruiseLine: item.cruiseLine,
-        shipName: item.shipName,
-        destination: item.destination || searchParams?.destination,
-        nights: item.nights || searchParams?.nights,
-        departureDate: item.departureDate || searchParams?.departureDate,
-        itinerary: item.itinerary || [],
-        amenities: item.amenities || [],
-        // Add passenger count
-        passengers: formData?.adults || 1,
-      }),
     };
 
     navigate("/booking", {
@@ -536,21 +358,6 @@ const Results = () => {
         searchParams: {
           ...searchParams,
           // ENHANCED: Include search-specific params
-          ...(searchType === "hotels" && {
-            nights: nights,
-            rooms: formData?.rooms || 1,
-            guests: (formData?.adults || 1) + (formData?.children || 0),
-            checkInDate: formData?.checkInDate,
-            checkOutDate: formData?.checkOutDate,
-          }),
-          ...(searchType === "cars" && {
-            days: days,
-            driverAge: formData?.age,
-            pickupLocation: formData?.pickupLocation,
-            dropLocation: formData?.dropLocation,
-            fromDateTime: formData?.fromDateTime,
-            toDateTime: formData?.toDateTime,
-          }),
           ...(searchType === "flights" && {
             travelers: (formData?.adults || 1) + (formData?.children || 0),
             travelClass: formData?.travelClass,
@@ -704,144 +511,6 @@ const Results = () => {
         </>
       )}
 
-      {searchType === "hotels" && (
-        <>
-          {/* Rating */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Minimum Rating
-            </label>
-            <div className="grid grid-cols-2 grid-rows-2 gap-4">
-              {[1, 2, 3, 4].map((rating) => (
-                <button
-                  key={rating}
-                  onClick={() => handleFilterChange("rating", rating)}
-                  className={`flex items-center px-3 py-1 rounded-lg border ${
-                    filters.rating === rating
-                      ? "bg-[var(--primary)] text-white border-[var(--primary)]"
-                      : "bg-white text-gray-700 border-gray-300"
-                  }`}
-                >
-                  <Star className="h-3 w-3 mr-1" />
-                  {rating}+
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Amenities */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Amenities
-            </label>
-            <div className="space-y-2">
-              {filterOptions.amenities.map((amenity) => (
-                <label key={amenity} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={filters.amenities.includes(amenity)}
-                    onChange={(e) =>
-                      handleArrayFilterChange(
-                        "amenities",
-                        amenity,
-                        e.target.checked
-                      )
-                    }
-                    className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                  />
-                  <span className="ml-2 text-sm">{amenity}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {searchType === "cars" && (
-        <>
-          {/* Car Types */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Car Types
-            </label>
-            <div className="space-y-2">
-              {filterOptions.carTypes.map((type) => (
-                <label key={type} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={filters.carTypes.includes(type)}
-                    onChange={(e) =>
-                      handleArrayFilterChange(
-                        "carTypes",
-                        type,
-                        e.target.checked
-                      )
-                    }
-                    className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                  />
-                  <span className="ml-2 text-sm">{type}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Providers */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Providers
-            </label>
-            <div className="space-y-2">
-              {filterOptions.providers.map((provider) => (
-                <label key={provider} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={filters.providers.includes(provider)}
-                    onChange={(e) =>
-                      handleArrayFilterChange(
-                        "providers",
-                        provider,
-                        e.target.checked
-                      )
-                    }
-                    className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                  />
-                  <span className="ml-2 text-sm">{provider}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
-
-      {searchType === "cruises" && (
-        <>
-          {/* Cruise Lines */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Cruise Lines
-            </label>
-            <div className="space-y-2">
-              {filterOptions.cruiseLines.map((line) => (
-                <label key={line} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={filters.cruiseLines.includes(line)}
-                    onChange={(e) =>
-                      handleArrayFilterChange(
-                        "cruiseLines",
-                        line,
-                        e.target.checked
-                      )
-                    }
-                    className="rounded border-gray-300 text-[var(--primary)] focus:ring-[var(--primary)]"
-                  />
-                  <span className="ml-2 text-sm">{line}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 
@@ -1217,12 +886,6 @@ const Results = () => {
           <p className="text-gray-600 mt-1 sm:mt-2">
             {searchType === "flights" &&
               `Flights from ${searchParams?.origin} to ${searchParams?.destination}`}
-            {searchType === "hotels" &&
-              `Hotels in ${searchParams?.destination}`}
-            {searchType === "cars" &&
-              `Car rentals in ${searchParams?.pickupLocation}`}
-            {searchType === "cruises" &&
-              `Cruises to ${searchParams?.destination}`}
           </p>
           <p className="text-gray-600 ">
             Showing {results.length} of {applyFilters(allResults).length}{" "}
@@ -1284,12 +947,6 @@ const Results = () => {
                     switch (searchType) {
                       case "flights":
                         return renderFlightCard(item, index);
-                      case "hotels":
-                        return renderHotelCard(item, index);
-                      case "cars":
-                        return renderCarCard(item, index);
-                      case "cruises":
-                        return renderCruiseCard(item, index);
                       default:
                         return null;
                     }
