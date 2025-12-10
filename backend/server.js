@@ -17,7 +17,7 @@ const corsOptions = {
   origin: [
     'http://localhost:5173',
     'https://complete-travel-solution.vercel.app',
-    'https://weyfar.com'
+    'https://freecallcontactus.online'
   ],
   credentials: true,
   optionsSuccessStatus: 200

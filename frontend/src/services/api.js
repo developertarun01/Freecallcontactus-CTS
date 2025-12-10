@@ -3,7 +3,7 @@ import axios from 'axios';
 // API base URL - Vercel will set this in production
 const API_BASE_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD
-    ? 'https://weyfar-flight-api.vercel.app/api'
+    ? 'https://freecallcontactus-api.vercel.app/api'
     : 'http://localhost:5000/api'
   );
 

@@ -236,7 +236,7 @@ const ThankYou = () => {
       // FIXED: Safe environment variable access
       const API_BASE_URL =
         (typeof process !== "undefined" && process.env.REACT_APP_API_URL) ||
-        "https://Freecallcontactus-flight-api.vercel.app";
+        "https://freecallcontactus-api.vercel.app";
 
       // console.log("Using API Base URL:", API_BASE_URL);
       // console.log(
