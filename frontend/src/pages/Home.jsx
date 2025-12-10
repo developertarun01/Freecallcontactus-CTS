@@ -51,53 +51,25 @@ const Home = () => {
 
   return (
     <>
-      <div className="sticky-call-button">
-        <div className="call-button-wrap">
-          <div className="call-img-block">
-            <img
-              src={`${import.meta.env.BASE_URL}images/call-center.png`}
-              alt="call-center"
-              width="40"
-            />
-            <div>
-              <p>Call & Get upto</p>
-              <p>
-                <Link to="tel:8885088828">
-                  <strong>+1 (888) 508-8828</strong>
-                </Link>
-              </p>
-            </div>
-          </div>
-          <div className="call-now">
-            <Link to="tel:8885088828">
-              <img
-                src={`${import.meta.env.BASE_URL}images/phone-outline.svg`}
-                alt="phone-outline"
-                width="20"
-              />
-            </Link>
-          </div>
-        </div>
+      <div className="mob-sub-header">
+        Cheap Airlines Ticket Reservation Desk
       </div>
-
-      <div className="mob-sub-header">Airlines Phone Number Reservation</div>
       <main>
-        <section className="hero-mobile-section">
-          <img
-            src={`${import.meta.env.BASE_URL}images/airlines-crew.png`}
-            alt="airlines-crew"
-            className="airline-crew-img"
-          />
-          <div className="booking-wrapper">
-            <Link to="#">
+        <Link to="tel:8885088828">
+          <section className="hero-mobile-section">
+            <img
+              src={`${import.meta.env.BASE_URL}images/airlines-crew.png`}
+              alt="airlines-crew"
+              className="airline-crew-img"
+            />
+            <div className="booking-wrapper">
               <div className="booking-changes mb-2">
                 Booking, Changes & Cancellation
               </div>
-            </Link>
-            <p className="no-holds text-center mb-1">
-              No Hold, Call Answered in 5 Sec
-            </p>
-            <Link to="+1 (888) 508-8828">
+              <p className="no-holds text-center mb-1">
+                No Hold, Call Answered in 5 Sec
+              </p>
+
               <div className="orange-btn">
                 <img
                   src={`${import.meta.env.BASE_URL}images/phone.svg`}
@@ -106,10 +78,11 @@ const Home = () => {
                 />
                 <span className="orange-link">+1 (888) 508-8828</span>
               </div>
-            </Link>
-            <p className="no-holds text-center">24/7 Helpline</p>
-          </div>
-        </section>
+
+              <p className="no-holds text-center">24/7 Helpline</p>
+            </div>
+          </section>
+        </Link>
         <section className="mobile-highlights-section">
           <div className="container">
             <div className="highlight-grid">
