@@ -1,9 +1,16 @@
 const { amadeus, extractAmadeusError } = require('../config/amadeus');
 const airlineCodes = require('airline-codes');
 
+// Fix the airline name function
 function getAirlineName(airlineCode) {
-  const airline = airlineCodes.findWhere({ iata: airlineCode });
-  return airline ? airline.get('name') : airlineCode;
+  if (!airlineCode) return 'Unknown Airline';
+
+  try {
+    const airline = airlineCodes.findWhere({ iata: airlineCode });
+    return airline ? airline.get('name') : airlineCode;
+  } catch (error) {
+    return airlineCode;
+  }
 }
 
 class AmadeusService {
@@ -77,7 +84,8 @@ class AmadeusService {
 
     // console.log(`📊 Processing ${data.length} raw results from Amadeus`);
 
-    const formatted = data
+    // First pass: process all locations
+    const locations = data
       .map((location, index) => {
         try {
           const result = {
@@ -107,11 +115,68 @@ class AmadeusService {
           return null;
         }
       })
-      .filter(Boolean)
-      .sort((a, b) => b.relevance - a.relevance);
+      .filter(Boolean);
 
-    // console.log(`✅ Successfully formatted ${formatted.length} REAL locations`);
-    return formatted;
+    // Group locations by city for finding the most relevant airport per city
+    const cityGroups = {};
+
+    locations.forEach(location => {
+      if (location.city) {
+        if (!cityGroups[location.city]) {
+          cityGroups[location.city] = [];
+        }
+        cityGroups[location.city].push(location);
+      }
+    });
+
+    // For each city, find the most relevant airport
+    const cityAirportMap = {};
+    Object.keys(cityGroups).forEach(city => {
+      const cityLocations = cityGroups[city];
+
+      // Find city entries first
+      const cityEntry = cityLocations.find(loc => loc.type === 'city');
+      if (cityEntry) {
+        // If city entry exists, use its code
+        cityAirportMap[city] = cityEntry.code;
+      } else {
+        // If no city entry, find the most relevant airport
+        const airports = cityLocations.filter(loc => loc.type === 'airport');
+        if (airports.length > 0) {
+          // Sort airports by relevance and get the highest
+          const mostRelevantAirport = [...airports].sort((a, b) => b.relevance - a.relevance)[0];
+          cityAirportMap[city] = mostRelevantAirport.code;
+        }
+      }
+    });
+
+    // Assign city code to locations without city IATA code
+    const formatted = locations.map(location => {
+      // If this is a city entry, keep its code
+      if (location.type === 'city') {
+        return location;
+      }
+
+      // If this is an airport and its city has a designated code
+      if (location.type === 'airport' && location.city && cityAirportMap[location.city]) {
+        // Create a copy to avoid modifying original
+        const enhancedLocation = { ...location };
+
+        // If the airport doesn't have a city code field, add it
+        // Or if you want to add a separate cityCode field:
+        enhancedLocation.cityCode = cityAirportMap[location.city];
+
+        return enhancedLocation;
+      }
+
+      return location;
+    });
+
+    // Sort by relevance
+    const sorted = formatted.sort((a, b) => b.relevance - a.relevance);
+
+    // console.log(`✅ Successfully formatted ${sorted.length} REAL locations`);
+    return sorted;
   }
 
   // Enhanced mock data (fallback)
@@ -151,10 +216,15 @@ class AmadeusService {
         destinationLocationCode: params.destination,
         departureDate: params.fromDate,
         adults: params.adults || 1,
-        children: params.children || 0,
         travelClass: params.travelClass || 'ECONOMY',
-        max: 150
+        max: 250,
+        currencyCode: 'USD',
       };
+
+      // ⭐ ONLY add children if it's > 0
+      if (params.children && parseInt(params.children) > 0) {
+        requestParams.children = parseInt(params.children);
+      }
 
       // Add return date for round trips
       if (params.tripType === 'roundTrip' && params.toDate) {
@@ -906,25 +976,41 @@ class AmadeusService {
     return this.getMockCruiseData(params);
   }
 
-  // Format flight response
+  // Format flight response with deduplication
   formatFlightResponse(data) {
     if (!data || !Array.isArray(data)) {
-      // console.log('No flight data received from Amadeus');
+      console.log('No flight data received from Amadeus');
       return [];
     }
 
-    // console.log(`Received ${data.length} flight offers from Amadeus`);
+    console.log(`Received ${data.length} raw flight offers from Amadeus`);
 
-    return data.map(offer => {
+    const formattedFlights = data.map(offer => {
       const itineraries = offer.itineraries || [];
       const firstSegment = itineraries[0]?.segments?.[0] || {};
       const lastSegment = itineraries[0]?.segments?.[itineraries[0]?.segments?.length - 1] || {};
       const price = offer.price || {};
+      const airlineCode = firstSegment.carrierCode;
+
+      // Get airline name from code
+      const airlineName = getAirlineName(airlineCode) || airlineCode;
+
+      const originalPrice = price.total || '0';
+      const originalCurrency = price.currency || 'USD';
+
+      let usdPrice = originalPrice;
+      if (originalCurrency === "EUR") {
+        const euroAmount = parseFloat(originalPrice);
+        if (!isNaN(euroAmount)) {
+          usdPrice = (euroAmount * 1.17).toFixed(2);
+        }
+      }
 
       return {
         id: offer.id,
-        airline: getAirlineName(firstSegment.carrierCode) || 'Unknown',
-        flightNumber: `${firstSegment.carrierCode}${firstSegment.number}`,
+        airlineCode: airlineCode,
+        airline: airlineName,
+        flightNumber: `${airlineCode}${firstSegment.number || ''}`,
         departure: {
           airport: firstSegment.departure?.iataCode,
           time: firstSegment.departure?.at,
@@ -938,12 +1024,64 @@ class AmadeusService {
         duration: itineraries[0]?.duration,
         stops: (itineraries[0]?.segments?.length || 1) - 1,
         price: {
-          total: price.total || '0',
-          currency: price.currency || 'USD'
+          total: usdPrice,
+          currency: 'USD'
         },
         class: offer.class?.[0] || 'ECONOMY',
-        source: 'amadeus' // Mark as real data
+        source: 'amadeus'
       };
+    });
+
+    // CRITICAL: Deduplicate flights from Amadeus
+    // const uniqueFlights = this.deduplicateFlights(formattedFlights);
+
+    // console.log(`Filtered ${formattedFlights.length} raw flights to ${uniqueFlights.length} unique flights`);
+
+    return formattedFlights;
+  }
+
+  // Fix the deduplicateFlights method - it should allow same airline, different flights
+  deduplicateFlights(flights) {
+    if (!flights || !Array.isArray(flights)) return [];
+
+    const seen = new Set();
+    const uniqueFlights = [];
+
+    for (const flight of flights) {
+      // Create a unique key that allows same airline but different flights
+      // Include airline, flight number, departure time, and arrival time
+      // This allows multiple flights from the same airline with different schedules
+      const key = `${flight.airlineCode}-${flight.flightNumber}-${flight.departure.time}-${flight.arrival.time}`;
+
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueFlights.push(flight);
+      } else {
+        // Debug log to see what's being filtered out
+        console.log(`Filtering out duplicate flight: ${flight.airlineCode} ${flight.flightNumber} at ${flight.departure.time}`);
+      }
+    }
+
+    // Additional filtering: Remove unrealistic flights
+    return uniqueFlights.filter(flight => {
+      // Filter out flights with incorrect arrival airports
+      if (flight.arrival.airport === 'ZVJ') {
+        console.log(`Filtering out flight with incorrect airport ZVJ: ${flight.flightNumber}`);
+        return false;
+      }
+
+      // Filter out flights with the same departure and arrival
+      if (flight.departure.airport === flight.arrival.airport) {
+        console.log(`Filtering out flight with same departure/arrival: ${flight.flightNumber}`);
+        return false;
+      }
+
+      // Filter out flights with invalid times
+      if (!flight.departure.time || !flight.arrival.time) {
+        return false;
+      }
+
+      return true;
     });
   }
 
@@ -988,97 +1126,127 @@ class AmadeusService {
     });
   }
 
-  // Mock flight data for development
+  // In amadeusService.js - REPLACE the getMockFlightData function
   getMockFlightData(params) {
-    const basePrice = 300 + Math.floor(Math.random() * 400);
-    const returnPrice = params.tripType === 'roundTrip' ? basePrice + 100 : 0;
+    const { origin, destination, fromDate, toDate, tripType, adults = 1 } = params;
 
-    const results = [
-      {
-        id: 'mock-1',
-        airline: 'AA',
-        flightNumber: 'AA123',
-        departure: {
-          airport: params.origin,
-          time: `${params.fromDate}T08:00:00`,
-          terminal: '1'
-        },
-        arrival: {
-          airport: params.destination,
-          time: `${params.fromDate}T11:30:00`,
-          terminal: '2'
-        },
-        duration: 'PT3H30M',
-        stops: 0,
-        price: {
-          total: basePrice.toFixed(2),
-          currency: 'USD'
-        },
-        class: params.travelClass || 'ECONOMY',
-        source: 'mock',
-        return: params.tripType === 'roundTrip' ? {
-          departure: {
-            airport: params.destination,
-            time: `${params.toDate}T14:00:00`,
-            terminal: '2'
-          },
-          arrival: {
-            airport: params.origin,
-            time: `${params.toDate}T17:30:00`,
-            terminal: '1'
-          },
-          duration: 'PT3H30M',
-          stops: 0,
-          price: {
-            total: returnPrice.toFixed(2),
-            currency: 'USD'
-          }
-        } : null
-      },
-      {
-        id: 'mock-2',
-        airline: 'DL',
-        flightNumber: 'DL456',
-        departure: {
-          airport: params.origin,
-          time: `${params.fromDate}T14:00:00`,
-          terminal: '3'
-        },
-        arrival: {
-          airport: params.destination,
-          time: `${params.fromDate}T18:45:00`,
-          terminal: '1'
-        },
-        duration: 'PT4H45M',
-        stops: 1,
-        price: {
-          total: (basePrice - 40).toFixed(2),
-          currency: 'USD'
-        },
-        class: params.travelClass || 'ECONOMY',
-        source: 'mock',
-        return: params.tripType === 'roundTrip' ? {
-          departure: {
-            airport: params.destination,
-            time: `${params.toDate}T09:00:00`,
-            terminal: '1'
-          },
-          arrival: {
-            airport: params.origin,
-            time: `${params.toDate}T12:15:00`,
-            terminal: '3'
-          },
-          duration: 'PT3H15M',
-          stops: 0,
-          price: {
-            total: (returnPrice - 40).toFixed(2),
-            currency: 'USD'
-          }
-        } : null
-      }
+    // Enhanced airlines database with proper codes
+    const airlines = [
+      { code: 'AA', name: 'American Airlines' },
+      { code: 'DL', name: 'Delta Air Lines' },
+      { code: 'UA', name: 'United Airlines' },
+      { code: 'EK', name: 'Emirates' },
+      { code: 'LH', name: 'Lufthansa' },
+      { code: 'BA', name: 'British Airways' },
+      { code: 'AF', name: 'Air France' },
+      { code: 'QR', name: 'Qatar Airways' },
+      { code: 'EY', name: 'Etihad Airways' },
+      { code: 'TK', name: 'Turkish Airlines' },
+      { code: 'VS', name: 'Virgin Atlantic' },
+      { code: 'B6', name: 'JetBlue Airways' },
+      { code: 'WN', name: 'Southwest Airlines' },
+      { code: 'AC', name: 'Air Canada' },
+      { code: 'JL', name: 'Japan Airlines' }
     ];
 
-    // console.log(`Generated ${results.length} mock flight offers`);
+    // Generate realistic base price based on route
+    const getBasePrice = (origin, destination) => {
+      const routeFactors = {
+        'JFK-LAX': 350, 'JFK-LHR': 600, 'JFK-CDG': 550,
+        'LAX-JFK': 350, 'LAX-LHR': 700, 'LAX-SYD': 1200,
+        'LHR-JFK': 600, 'LHR-DXB': 450, 'LHR-SIN': 800,
+        'default': 300
+      };
+
+      const route = `${origin}-${destination}`;
+      return routeFactors[route] || routeFactors.default;
+    };
+
+    const basePrice = getBasePrice(origin, destination);
+    const results = [];
+
+    // Generate 10-15 unique flights instead of just 2
+    const numFlights = 10 + Math.floor(Math.random() * 6);
+
+    for (let i = 0; i < numFlights; i++) {
+      const airline = airlines[i % airlines.length];
+      const flightNum = `${airline.code}${100 + i}`;
+
+      // Generate unique departure times (spread throughout the day)
+      const hour = 6 + Math.floor(Math.random() * 14); // 6 AM to 8 PM
+      const minute = Math.floor(Math.random() * 60);
+      const departureTime = `${fromDate}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
+
+      // Calculate realistic duration (3-12 hours)
+      const durationHours = 3 + Math.floor(Math.random() * 10);
+      const durationMinutes = Math.floor(Math.random() * 60);
+      const duration = `PT${durationHours}H${durationMinutes}M`;
+
+      // Calculate arrival time
+      const arrivalDate = new Date(departureTime);
+      arrivalDate.setHours(arrivalDate.getHours() + durationHours);
+      arrivalDate.setMinutes(arrivalDate.getMinutes() + durationMinutes);
+      const arrivalTime = arrivalDate.toISOString().replace('Z', '');
+
+      // Price variation (±20%)
+      const priceVariation = 0.8 + (Math.random() * 0.4);
+      const price = (basePrice * priceVariation * adults).toFixed(2);
+
+      // Stops (0, 1, or 2)
+      const stopsOptions = [0, 0, 0, 1, 1, 2]; // Weighted towards non-stop
+      const stops = stopsOptions[Math.floor(Math.random() * stopsOptions.length)];
+
+      // For stops, generate layover airport
+      const layoverAirports = ['ORD', 'DFW', 'ATL', 'LAX', 'DEN', 'JFK', 'LHR', 'CDG', 'DXB'];
+      const layover = stops > 0 ? layoverAirports[Math.floor(Math.random() * layoverAirports.length)] : null;
+
+      results.push({
+        id: `mock-${origin}-${destination}-${i}`,
+        airlineCode: airline.code,
+        airline: airline.name,
+        flightNumber: flightNum,
+        departure: {
+          airport: origin,
+          time: departureTime,
+          terminal: Math.floor(Math.random() * 5) + 1
+        },
+        arrival: {
+          airport: destination, // FIXED: Use actual destination, not ZVJ
+          time: arrivalTime,
+          terminal: Math.floor(Math.random() * 5) + 1
+        },
+        duration: duration,
+        stops: stops,
+        price: {
+          total: price,
+          currency: 'USD'
+        },
+        class: params.travelClass || 'ECONOMY',
+        source: 'mock',
+        layover: layover
+      });
+    }
+
+    // For round trips, generate return flights
+    if (tripType === 'roundTrip' && toDate) {
+      const returnFlights = this.getMockFlightData({
+        ...params,
+        origin: destination,
+        destination: origin,
+        fromDate: toDate,
+        tripType: 'oneWay'
+      });
+
+      // Combine with outbound flights (in real app, you'd pair them)
+      // For simplicity, we'll just add them as separate one-way options
+      results.push(...returnFlights.map(f => ({
+        ...f,
+        id: f.id.replace('mock-', 'mock-return-'),
+        tripType: 'roundTrip'
+      })));
+    }
+
+    console.log(`Generated ${results.length} unique mock flights for ${origin} → ${destination}`);
     return results;
   }
 

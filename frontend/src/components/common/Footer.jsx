@@ -100,17 +100,17 @@ const Footer = () => {
               <h2 className="text-underline mb-1">IMPORTANT LINKS</h2>
               <ul>
                 <li>
-                  <Link to="https://freecallcontactus.online/about">
+                  <Link to="./about">
                     About Us
                   </Link>
                 </li>
                 <li>
-                  <Link to="https://freecallcontactus.online/contact">
-                    About Us
+                  <Link to="./contact">
+                    Contact Us
                   </Link>
                 </li>
                 <li>
-                  <Link to="https://freecallcontactus.online/privacy_policy">
+                  <Link to="./privacy_policy">
                     Privacy Policy
                   </Link>
                 </li>

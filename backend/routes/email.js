@@ -100,6 +100,141 @@ const renderBookingDetails = (booking) => {
           </div>
         </div>
       `;
+
+    // In Email.js - Update the hotel case in renderBookingDetails()
+    case "hotels":
+      return `
+    <div style="margin-bottom: 15px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Hotel:</span>
+        <span>${booking.details.hotelName || booking.details.name}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Location:</span>
+        <span>${booking.details.location || booking.details.address?.city || booking.details.destination}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Check-in:</span>
+        <span>${new Date(booking.details.checkInDate || booking.details.hotelDetails?.checkInDate).toLocaleDateString()}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Check-out:</span>
+        <span>${new Date(booking.details.checkOutDate || booking.details.hotelDetails?.checkOutDate).toLocaleDateString()}</span>
+      </div>
+      ${booking.details.rooms ? `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+          <span style="color: #6b7280;">Rooms:</span>
+          <span>${booking.details.rooms}</span>
+        </div>
+      ` : ''}
+      ${booking.details.guests ? `
+        <div style="display: flex; justify-content: space-between;">
+          <span style="color: #6b7280;">Guests:</span>
+          <span>${booking.details.guests}</span>
+        </div>
+      ` : ''}
+      ${booking.details.nights ? `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+          <span style="color: #6b7280;">Duration:</span>
+          <span>${booking.details.nights} night(s)</span>
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+    case "cars":
+      return `
+    <div style="margin-bottom: 15px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Car Type:</span>
+        <span>${booking.details.carType} - ${booking.details.provider}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Model:</span>
+        <span>${booking.details.model}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Pick-up:</span>
+        <span>${booking.details.pickupLocation} on ${new Date(booking.details.fromDateTime).toLocaleDateString()}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Drop-off:</span>
+        <span>${booking.details.dropLocation || "Same as pick-up"} on ${new Date(booking.details.toDateTime).toLocaleDateString()}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Duration:</span>
+        <span>${booking.details.duration}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Driver Age:</span>
+        <span>${booking.details.driverAge} years</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Transmission:</span>
+        <span style="text-transform: capitalize;">${booking.details.transmission}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Capacity:</span>
+        <span>${booking.details.seats} seats, ${booking.details.bags} bags</span>
+      </div>
+      ${booking.details.features && booking.details.features.length > 0 ? `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+          <span style="color: #6b7280;">Features:</span>
+          <span style="font-size: 13px;">
+            ${booking.details.features.slice(0, 3).join(", ")}
+            ${booking.details.features.length > 3 ? "..." : ""}
+          </span>
+        </div>
+      ` : ''}
+    </div>
+  `;
+
+    // In email.js - Update the cruise case in renderBookingDetails()
+    case "cruises":  // Changed from "cruise" to "cruises"
+      return `
+    <div style="margin-bottom: 15px;">
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Cruise Line:</span>
+        <span>${booking.details.cruiseLine}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Ship:</span>
+        <span>${booking.details.shipName}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Destination:</span>
+        <span>${booking.details.destination}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Departure Port:</span>
+        <span>${booking.details.origin}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Duration:</span>
+        <span>${booking.details.nights} nights</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Departure Date:</span>
+        <span>${new Date(booking.details.departureDate).toLocaleDateString()}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+        <span style="color: #6b7280;">Passengers:</span>
+        <span>
+          ${booking.details.passengers || 1} 
+          ${(booking.details.passengers || 1) === 1 ? "person" : "people"}
+        </span>
+      </div>
+      ${booking.details.itinerary && booking.details.itinerary.length > 0 ? `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+          <span style="color: #6b7280;">Itinerary:</span>
+          <span style="font-size: 13px;">
+            ${booking.details.itinerary.join(" → ")}
+          </span>
+        </div>
+      ` : ''}
+    </div>
+  `;
+
     default:
       return `
         <div style="margin-bottom: 15px;">
@@ -174,7 +309,7 @@ router.post('/send-receipt-email', async (req, res) => {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Booking Confirmation</title>
+        <title>Booking Details</title>
         <style>
           @media only screen and (max-width: 600px) {
             .container {
@@ -194,8 +329,22 @@ router.post('/send-receipt-email', async (req, res) => {
         <div class="container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
           <!-- Header -->
           <div style="background: linear-gradient(135deg, #059669, #10b981); color: white; padding: 30px 20px; text-align: center;">
-            <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: bold;">Complete Travel Solution</h1>
-            <p style="margin: 0; font-size: 18px; opacity: 0.9;">Booking Confirmation</p>
+            <h1 style="margin: 0 0 10px 0; font-size: 28px; font-weight: bold;">Weyfar Travel Solution</h1>
+            <p style="margin: 0; font-size: 18px; opacity: 0.9;">Booking Details</p>
+            <p style="margin: 0; font-size: 15px; opacity: 0.9;">Reach us out for any flight related concerns</p>
+
+<div style="margin-top:16px; display:flex; justify-content: center; gap:20px; font-size:15px;">
+  
+  <a href="tel:8888082182" style="display:inline-flex; text-decoration:none; color:inherit;">
+    <div>📞 +1 (888) 808-2182</div>
+  </a>
+
+  <a href="mailto:bookingdesk@weyfar.com" style="display:inline-flex; text-decoration:none; color:inherit;">
+    <div>📧 bookingdesk@weyfar.com</div>
+  </a>
+
+</div>
+
             <div style="width: 80px; height: 3px; background: white; margin: 20px auto 0 auto; opacity: 0.7;"></div>
           </div>
 
@@ -203,7 +352,7 @@ router.post('/send-receipt-email', async (req, res) => {
           <div style="padding: 30px;">
             <!-- Greeting -->
             <p style="margin-bottom: 25px; font-size: 16px; color: #4b5563;">
-              Thank you for your booking with Complete Travel Solution. Your ${booking.type} has been successfully confirmed.
+              Thank you for your booking with Weyfar Travel Solution. Your ${booking.type} booking is in <b>process</b>.
             </p>
 
             <!-- Booking & Payment Info Grid -->
@@ -228,8 +377,8 @@ router.post('/send-receipt-email', async (req, res) => {
                   </div>
                   <div style="display: flex; justify-content: space-between;">
                     <span style="color: #6b7280; font-size: 14px;">Status:</span>
-                    <span style="background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
-                      ${booking.status}
+                    <span style="background: #fefcbf; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; text-transform: uppercase;">
+                      PENDING
                     </span>
                   </div>
                 </div>
@@ -372,13 +521,13 @@ router.post('/send-receipt-email', async (req, res) => {
           <!-- Footer -->
           <div style="background: #f7fafc; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
             <p style="margin: 0 0 10px 0; font-weight: bold; color: #059669;">
-              Thank you for choosing Complete Travel Solution!
+              Thank you for choosing Weyfar Travel Solution!
             </p>
             <p style="margin: 0 0 10px 0; font-size: 12px; color: #6b7280;">
               This document is electronically generated and valid without signature.
             </p>
             <div style="font-size: 11px; color: #9ca3af;">
-              <p style="margin: 5px 0;">📧 bookingdesk@freecallcontactus.online | 📞 +1 (888) 508-8828</p>
+              <p style="margin: 5px 0;">📧 bookingdesk@weyfar.com | 📞 +1 (888) 808-2182</p>
               <p style="margin: 5px 0;">Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
             </div>
           </div>
@@ -389,7 +538,7 @@ router.post('/send-receipt-email', async (req, res) => {
 
     const mailOptions = {
       from: {
-        name: 'Complete Travel Solution',
+        name: 'Weyfar Travel Solution',
         address: process.env.EMAIL_USER
       },
       to: to.join(', '),
